@@ -1,2 +1,0 @@
-import CoreMotion
-print("Testing")
