@@ -3,65 +3,63 @@ import CoreMotion
 import Combine
 
 class MotionLogger: ObservableObject {
-    // CMBatchedSensorManager는 iOS 17.0 이상에서 도입된 초고주파수 배치 모션 로거입니다.
-    private var batchedManager: CMBatchedSensorManager?
+    private let manager = CMMotionManager()
     
     @Published var isLogging = false
     @Published var currentAccelHz: Int = 0
     @Published var currentGyroHz: Int = 0
     
-    // 내부 상태용
+    // UI 업데이트용 실시간 카운트
     private var accelTickCount = 0
     private var gyroTickCount = 0
     private var hzTimer: Timer?
     
+    // 센서 데이터를 받을 전용 백그라운드 큐
+    private let accelQueue = OperationQueue()
+    private let gyroQueue = OperationQueue()
+    
+    // 내부 뱃치 처리용 임시 저장소 및 Lock (메인 스레드 부하 분산)
+    private var tempAccelBatch: [CMAccelerometerData] = []
+    private var tempGyroBatch: [CMDeviceMotion] = []
+    private let accelLock = NSLock()
+    private let gyroLock = NSLock()
+    
     init() {
-        if #available(iOS 17.0, *) {
-            if CMBatchedSensorManager.isAccelerometerSupported && CMBatchedSensorManager.isDeviceMotionSupported {
-                self.batchedManager = CMBatchedSensorManager()
-            } else {
-                print("⚠️ 기기가 CMBatchedSensorManager를 지원하지 않습니다 (iPhone 15 Pro 이상 권장).")
-            }
-        }
+        accelQueue.name = "com.iphoneLogger.accelQueue"
+        accelQueue.maxConcurrentOperationCount = 1
+        accelQueue.qualityOfService = .userInteractive // 최고 우선순위
+        
+        gyroQueue.name = "com.iphoneLogger.gyroQueue"
+        gyroQueue.maxConcurrentOperationCount = 1
+        gyroQueue.qualityOfService = .userInteractive
     }
     
     func startLogging() {
         guard !isLogging else { return }
+        isLogging = true
         
-        if #available(iOS 17.0, *) {
-            guard let manager = batchedManager else { return }
-            
-            isLogging = true
-            
-            // 1. Hz 측정을 위한 타이머 (UI 렌더링용)
-            startHzTimer()
-            
-            Task {
-                do {
-                    // 2. 가속도계 스트림 시작 (최대 800Hz)
-                    for try await accelBatch in manager.accelerometerUpdates() {
-                        if !self.isLogging { break }
-                        processAccelBatch(accelBatch)
-                    }
-                } catch {
-                    print("가속도계 스트림 에러: \(error)")
-                }
+        startHzTimer()
+        
+        // 1. 가속도계 스트림 시작 (목표: 800Hz)
+        if manager.isAccelerometerAvailable {
+            manager.accelerometerUpdateInterval = 1.0 / 800.0
+            manager.startAccelerometerUpdates(to: accelQueue) { [weak self] data, error in
+                guard let self = self, let data = data else { return }
+                self.processAccelData(data)
             }
-            
-            Task {
-                do {
-                    // 3. 자이로/DeviceMotion 스트림 시작
-                    for try await motionBatch in manager.deviceMotionUpdates() {
-                        if !self.isLogging { break }
-                        processMotionBatch(motionBatch)
-                    }
-                } catch {
-                    print("자이로 스트림 에러: \(error)")
-                }
-            }
-            
         } else {
-            print("⚠️ CMBatchedSensorManager는 iOS 17 이상에서만 작동합니다.")
+            print("⚠️ 가속도계를 사용할 수 없습니다.")
+        }
+        
+        // 2. 자이로/DeviceMotion 스트림 시작 (목표: 200Hz)
+        if manager.isDeviceMotionAvailable {
+            manager.deviceMotionUpdateInterval = 1.0 / 200.0
+            manager.startDeviceMotionUpdates(to: gyroQueue) { [weak self] data, error in
+                guard let self = self, let data = data else { return }
+                self.processGyroData(data)
+            }
+        } else {
+            print("⚠️ DeviceMotion(자이로)을 사용할 수 없습니다.")
         }
     }
     
@@ -71,28 +69,63 @@ class MotionLogger: ObservableObject {
         hzTimer = nil
         currentAccelHz = 0
         currentGyroHz = 0
+        
+        manager.stopAccelerometerUpdates()
+        manager.stopDeviceMotionUpdates()
+        
+        // 남아있는 배치 털어내기
+        accelLock.lock()
+        tempAccelBatch.removeAll()
+        accelLock.unlock()
+        
+        gyroLock.lock()
+        tempGyroBatch.removeAll()
+        gyroLock.unlock()
     }
     
-    // MARK: - Data Processing
+    // MARK: - Data Processing (Custom Batching)
     
-    private func processAccelBatch(_ batch: [CMAccelerometerData]) {
-        let sysTimestamp = Date().timeIntervalSince1970
-        // [Key Decision 1 & 2]: 메인 스레드를 피해 800Hz 배열 통째로 BufferQueue (Layer 4) 로 방출.
-        // thermalState는 0(Nominal) 으로 임시 하드코딩 (차후 SystemMonitor와 연동)
-        BufferQueue.shared.enqueue(accelerometerBatch: batch, sysTimestamp: sysTimestamp, targetHz: 800, thermalState: 0)
+    private func processAccelData(_ data: CMAccelerometerData) {
+        accelLock.lock()
+        tempAccelBatch.append(data)
+        let batch = tempAccelBatch
+        // 800Hz 기준 40개가 모이면 대략 0.05초(50ms) 분량
+        let shouldSend = batch.count >= 40
+        if shouldSend {
+            tempAccelBatch.removeAll(keepingCapacity: true)
+        }
+        accelLock.unlock()
         
-        DispatchQueue.main.async {
-            self.accelTickCount += batch.count
+        if shouldSend {
+            let sysTimestamp = Date().timeIntervalSince1970
+            // [Key Decision 1 & 2]: 메인 스레드를 피해 배열 통째로 BufferQueue 로 방출
+            // thermalState는 0(Nominal) 으로 임시 하드코딩
+            BufferQueue.shared.enqueue(accelerometerBatch: batch, sysTimestamp: sysTimestamp, targetHz: 800, thermalState: 0)
+            
+            DispatchQueue.main.async {
+                self.accelTickCount += batch.count
+            }
         }
     }
     
-    @available(iOS 17.0, *)
-    private func processMotionBatch(_ batch: [CMDeviceMotion]) {
-        let sysTimestamp = Date().timeIntervalSince1970
-        BufferQueue.shared.enqueue(deviceMotionBatch: batch, sysTimestamp: sysTimestamp, targetHz: 200, thermalState: 0)
+    private func processGyroData(_ data: CMDeviceMotion) {
+        gyroLock.lock()
+        tempGyroBatch.append(data)
+        let batch = tempGyroBatch
+        // 200Hz 기준 20개가 모이면 대략 0.1초 분량
+        let shouldSend = batch.count >= 20
+        if shouldSend {
+            tempGyroBatch.removeAll(keepingCapacity: true)
+        }
+        gyroLock.unlock()
         
-        DispatchQueue.main.async {
-            self.gyroTickCount += batch.count
+        if shouldSend {
+            let sysTimestamp = Date().timeIntervalSince1970
+            BufferQueue.shared.enqueue(deviceMotionBatch: batch, sysTimestamp: sysTimestamp, targetHz: 200, thermalState: 0)
+            
+            DispatchQueue.main.async {
+                self.gyroTickCount += batch.count
+            }
         }
     }
     
