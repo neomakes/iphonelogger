@@ -1,5 +1,6 @@
 import Foundation
 import CoreMotion
+import Combine
 
 class MotionLogger: ObservableObject {
     // CMBatchedSensorManager는 iOS 17.0 이상에서 도입된 초고주파수 배치 모션 로거입니다.

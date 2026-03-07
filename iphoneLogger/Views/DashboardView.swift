@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct DashboardView: View {
     @EnvironmentObject var logController: LogController

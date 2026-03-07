@@ -1,5 +1,6 @@
 import Foundation
 import CoreMotion
+import Combine
 
 class BufferQueue: ObservableObject {
     static let shared = BufferQueue()
