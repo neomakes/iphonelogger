@@ -68,8 +68,8 @@ The app is decoupled into four primary layers to guarantee UI thread stability w
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/iPhone16Pro-Logger.git
-   cd iPhone16Pro-Logger
+   git clone https://github.com/neomakes/iphonelogger.git
+   cd iphonelogger
    ```
 2. **Open in Xcode**
    Open `iPhoneLogger.xcodeproj` in Xcode and configure your Development Team in Signing & Capabilities.
