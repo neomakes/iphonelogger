@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 @main
 struct iphoneLoggerApp: App {
@@ -13,6 +14,7 @@ struct iphoneLoggerApp: App {
                 .preferredColorScheme(.dark)
                 .onAppear {
                     // 앱 실행 시 필수 디렉토리 및 시스템 초기화
+                    BufferQueue.shared.logController = logController
                     setupAppEnvironment()
                 }
         }
@@ -20,6 +22,21 @@ struct iphoneLoggerApp: App {
     
     private func setupAppEnvironment() {
         print("🚀 멀티모달 로깅 테스트베드 가동 준비 완료")
-        // 추후 추가될 초기화 로직 (오디오 세션 설정, 디렉토리 생성 등)
+        
+        // 1. Configure Audio Session for Haptics & System Sounds
+        let session = AVAudioSession.sharedInstance()
+        do {
+            // Standard recording session setup
+            try session.setCategory(.playAndRecord, mode: .videoRecording, options: [.defaultToSpeaker, .allowBluetooth])
+            try session.setActive(true)
+            print("🎙️ Audio Session configured for Recording")
+        } catch {
+            print("🔴 Audio Session Setup Error: \(error)")
+        }
+        
+        // 2. Ensure session directory exists
+        let docURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let sessionDir = docURL.appendingPathComponent("sessions")
+        try? FileManager.default.createDirectory(at: sessionDir, withIntermediateDirectories: true)
     }
 }
