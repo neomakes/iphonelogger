@@ -91,7 +91,7 @@ iphoneLogger/
 
 ## 📄 License & Contribution
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
 Pull Requests are extremely welcome! If you find a new private API or a more efficient logging pipeline, please feel free to contribute.
 
 ---
