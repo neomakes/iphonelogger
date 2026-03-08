@@ -51,8 +51,7 @@ The true value of this testbed lies in its two-phased testing methodology, desig
 ---
 
 ## 📊 Data Classification Schema & Expected Frequency
-
-Based on the [PRD (v1.0)](docs/01_PRD.md), the logged data is classified into three sensory-motor categories. The table below outlines the specific data items, their target frequency, and the actual experimental frequencies observed during stress testing.
+The logged data is classified into three sensory-motor categories. The table below outlines the specific data items, their target frequency, and the actual experimental frequencies observed during stress testing.
 
 | Category           | Sub-Category    | Data Points                                                                        | Target Hz           | Experimental Range         | Log File Prefix                       |
 | :----------------- | :-------------- | :--------------------------------------------------------------------------------- | :------------------ | :------------------------- | :------------------------------------ |
