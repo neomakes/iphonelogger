@@ -1,6 +1,22 @@
+# Project-specific
 /docs/
-.DS_Store
 analysis/data/
 analysis/data.js
 *.csv
 future.md
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+DerivedData/
+build/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# OMC / Claude
+.omc/

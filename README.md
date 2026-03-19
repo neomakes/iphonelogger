@@ -1,96 +1,67 @@
-# iPhone 16 Pro Multi-Modal Logger: Edge AI Testbed 📱⚡️
+# iphoneLogger
 
 [![Swift](https://img.shields.io/badge/Swift-5.10+-orange.svg)](https://swift.org)
 [![iOS](https://img.shields.io/badge/iOS-17.0+-blue.svg)](https://developer.apple.com/ios/)
 [![Device](https://img.shields.io/badge/Device-iPhone_16_Pro-black.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)]()
 
-A lightweight, minimal, yet powerful multi-modal sensor logging application designed specifically for the **iPhone 16 Pro**.
-
-This project serves as a **Sensory-Motor Loop Testbed**. By capturing raw, high-frequency sensory data (Exteroception/Proprioception) alongside active motor interventions and internal health metrics (Interoception), it provides a comprehensive dataset to analyze hardware reactions in real-world "Chaos" conditions. Currently in **Phase 3: Active Sensing Integration**.
-
----
-
-## 🌟 Key Features
-
-- **Offline-First & Graceful Degradation**: Operates completely offline to observe pure hardware limits. Instead of preventing frame drops, the app explicitly captures frequency fluctuations $X(t)$ caused by CPU load and thermal throttling.
-- **Multi-CSV Architecture**: Eliminates I/O lock contention by isolating $800Hz$ motion data and $1Hz$ GPS data into independent, highly efficient asynchronous CSV streams.
-- **Comprehensive Sensor Coverage**:
-  - **Motion**: `800Hz` Accelerometer & `200Hz` HDR Gyroscope.
-  - **Vision & AR**: `ARKit` Face Tracking (BlendShapes), LiDAR Mesh, and Raw Camera metadata.
-  - **Auditory**: Studio-quality Mic levels (dBFS) and Audio Mix metadata.
-  - **Environment**: Barometer, Ambient Light Sensor (ALS), and Color Spectrum.
-  - **Location**: Dual-Frequency GPS (L1+L5) and precise Magnetometer data.
-  - **Context**: `thermalState`, Battery, CPU/Mem load.
-- **Active Intervention & Actuators**:
-  - **Flash/Torch**: Torch intensity control (0-1.0) for ALS & Vision stress testing.
-  - **Active Lens**: Locking exposure/focus and zoom control for Active Vision research.
+Multi-modal sensor logging testbed for iPhone 16 Pro — capturing raw, high-frequency sensory data for edge AI agent research.
 
 ---
 
-## 🧪 Testing Methodology (The Core Value)
+## Table of Contents
 
-The true value of this testbed lies in its two-phased testing methodology, designed to capture both the "ideal" hardware limits and "chaos" states:
-
-- **Phase 1: Isolating & Ideal State**
-  - Toggle specific sensors individually using the dashboard switches.
-  - **Goal**: Validate baseline pipeline integrity and observe hardware capabilities at ideal constant frequencies ($C$ Hz) with near-zero latency.
-- **Phase 2: Global Stress Test & Logging All Data**
-  - Trigger the 🔴 **[LOGGING ALL DATA]** button to ignite all sensors simultaneously.
-  - **Goal**: Force memory buffer overflows and thermal state spikes (`Serious` / `Critical`). This induces OS scheduling delays, causing high-frequency data to drop and warp into irregular $X(t)$ time-series data—perfectly simulating real-world sensor interference and Jitter.
-- **Phase 3: Active Sensing & Intervention**
-  - Use the **Actuators** panel to trigger flash pulses while logging.
-  - **Goal**: Measure how controlled physical interventions (Motor Commands) affect sensor noise and how models can filter out self-induced artifacts.
-- **Phase 4: Data Visualization & Analysis**
-  - Export the logs to Python/Jupyter to visualize the correlation between `thermal_state`, `actuator_events`, and data `dropout`. This noisy context perfectly simulates real-world hardware limits.
-- **Phase 5: Frequency Modulation & Jitter Analysis (Proprioception/IMU ONLY)**
-  - Use the **[TESTING VARYING FREQUENCY]** button to randomly modulate the target frequency ($100Hz \leftrightarrow 800Hz$).
-  - **Target Limitation**: Dynamically modulating the target frequency is _only supported for Proprioceptive IMU (Accelerometer & Gyroscope)_. Exteroceptive sensors (ARKit/Vision, Audio, GPS) run on fixed polling engines or hardware-locked intervals dictated by Apple's Core frameworks and cannot be artificially modulated in real-time without severely dropping pipeline integrity.
-  - **Goal**: Analyze the hardware's settling time and the discrepancy between requested $C$ and actual $X(t)$ under dynamic load for CoreMotion inputs.
+- [Background \& Motivation](#background--motivation)
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Data Schema](#data-schema)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Related Projects](#related-projects)
+- [Current Status](#current-status)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## 📊 Data Classification Schema & Expected Frequency
-The logged data is classified into three sensory-motor categories. The table below outlines the specific data items, their target frequency, and the actual experimental frequencies observed during stress testing.
+## Background & Motivation
 
-| Category           | Sub-Category    | Data Points                                                                        | Target Hz           | Experimental Range         | Log File Prefix                       |
-| :----------------- | :-------------- | :--------------------------------------------------------------------------------- | :------------------ | :------------------------- | :------------------------------------ |
-| **Exteroception**  | **Vision**      | Face BlendShapes (52 pts), LiDAR Scene Mesh, Camera Metadata (ISO, Exposure, Lens) | 60Hz / 15Hz / 30Hz  | 60Hz / 15Hz / 30Hz (Fixed) | `extero_vision_*`                     |
-|                    | **Auditory**    | Microphone Peak & Average Power (dBFS)                                             | 10Hz                | 10Hz (Fixed)               | `extero_audio_mic`                    |
-|                    | **Spatial**     | Lat/Lon, GPS Heading, Digital Compass                                              | 1Hz / 30Hz          | 1Hz / ~30Hz (Fixed)        | `extero_gps_*`                        |
-|                    | **Environment** | Barometric Pressure, Lux Proxy                                                     | 10Hz / 1Hz          | ~10Hz / ~1Hz (Fixed)       | `extero_env_*`                        |
-| **Proprioception** | **IMU**         | Accelerometer (x,y,z), Gyroscope (pitch,roll,yaw), Motion Activity                 | 800Hz / 200Hz / 1Hz | **Variable (0-800Hz)**     | `proprio_imu_*`<br>`proprio_motion_*` |
-|                    | **Actuator**    | LED Torch Intensity, Zoom Factor, Exposure Lock                                    | Event-based         | Event-based                | `proprio_actuator_*`                  |
-| **Interoception**  | **Health**      | CPU, GPU, ANE, Thermal State, Mem (MB), Battery                                    | 1Hz                 | 1Hz                        | `intero_sys_health`                   |
+Modern edge AI agents need rich, real-world sensory data to understand physical context — but most datasets are sanitized, downsampled, or synthetic. **iphoneLogger** captures the raw, noisy reality of hardware-level sensor behavior on the iPhone 16 Pro.
+
+This project serves as a **Physical DataStream testbed**: by logging exteroceptive (vision, audio, GPS), proprioceptive (IMU, actuators), and interoceptive (thermal, battery, CPU) signals simultaneously, it produces multi-modal datasets that reflect real-world interference patterns — frequency jitter, thermal throttling, OS scheduling delays, and sensor crosstalk.
+
+The resulting data streams are designed as inputs for the [neomakes](https://github.com/neomakes) agent ecosystem, functioning as a hardware-level MCP-like sensor interface for on-device AI agents.
 
 ---
 
-## ⏱ Time-Series Minimum Schema
+## Key Features
 
-To perfectly map delays, jitters, and dropouts, every single row across all Multi-CSV files enforces a strict meta-schema layer:
-
-| Column          | Description & Analysis Purpose                                                                                         |
-| :-------------- | :--------------------------------------------------------------------------------------------------------------------- |
-| `hw_timestamp`  | Hardware-level creation time. Used to calculate real frequency $X(t)$ and **Jitter**.                                  |
-| `sys_timestamp` | OS/App-level arrival time. <br/>`sys_timestamp` - `hw_timestamp` = **OS Scheduling Delay**.                            |
-| `target_hz`     | The target frequency requested ($C$). Used to monitor the control signal.                                              |
-| `sys_hz`        | The software-observed arrival frequency in the app layer. <br/>`target_hz` - `sys_hz` = **App Scheduling Starvation**. |
-| `thermal_state` | Real-time device temp (`0: Nominal` to `3: Critical`). Correlates heat with **Data Dropout** and **Jitter**.           |
+- **Offline-First & Graceful Degradation** — Operates completely offline to capture pure hardware limits. Explicitly records frequency fluctuations caused by CPU load and thermal throttling.
+- **Multi-CSV Architecture** — Eliminates I/O lock contention by isolating high-frequency motion data (800Hz) and low-frequency GPS data (1Hz) into independent asynchronous CSV streams.
+- **8 Sensor Modules**:
+  - **Motion**: 800Hz Accelerometer & 200Hz HDR Gyroscope
+  - **Vision & AR**: ARKit Face Tracking (52 BlendShapes), LiDAR Mesh, Raw Camera metadata
+  - **Audio**: Studio-quality microphone levels (dBFS) and audio mix metadata
+  - **Environment**: Barometer, Ambient Light Sensor (ALS), Color Spectrum
+  - **Location**: Dual-frequency GPS (L1+L5), Magnetometer
+  - **System Health**: thermalState, Battery, CPU/Memory load
+- **Active Intervention** — Torch intensity control and lens lock (exposure/focus/zoom) for controlled stress testing and active vision research.
 
 ---
 
-## 🏗 Architecture Layers
+## Architecture
 
-The app is decoupled into four primary layers to guarantee UI thread stability while ingesting thousands of events per second:
+The app is decoupled into four layers to maintain UI thread stability while ingesting thousands of events per second:
 
-1. **Core Application Layer**: SwiftUI Dashboard, Permission Manager, and central `LogController` Orchestrator.
-2. **Sensor Management Layer**: Independent provider classes (`MotionLogger`, `LocationEnvironmentLogger`, `VisionAudioLogger`).
-3. **System Introspection Layer**: Monitors device health (`SystemMetricsMonitor`) to trigger feedback loops.
-4. **Storage & Persistence Layer**: A non-blocking `BufferQueue` mapped into a `DataFileWriter` (Multi-CSV format).
+1. **Core Application Layer** — SwiftUI Dashboard, Permission Manager, LogController Orchestrator
+2. **Sensor Management Layer** — Independent provider classes (MotionLogger, LocationEnvironmentLogger, VisionAudioLogger)
+3. **System Introspection Layer** — Device health monitoring (SystemMetricsMonitor) for feedback loops
+4. **Storage & Persistence Layer** — Non-blocking BufferQueue → DataFileWriter (Multi-CSV)
 
 ```mermaid
 flowchart TB
-    %% Layer Styling
     classDef ui fill:#1E1E1E,stroke:#4CAF50,stroke-width:2px,color:#fff
     classDef core fill:#2C3E50,stroke:#3498DB,stroke-width:2px,color:#fff
     classDef sensor fill:#5D6D7E,stroke:#F1C40F,stroke-width:2px,color:#fff
@@ -98,99 +69,200 @@ flowchart TB
     classDef storage fill:#27AE60,stroke:#2ECC71,stroke-width:2px,color:#fff
     classDef system fill:#8E44AD,stroke:#9B59B6,stroke-width:2px,color:#fff
 
-    subgraph Layer1 [1. Core Application Layer & View]
+    subgraph Layer1 [Core Application Layer]
         direction TB
         UI[DashboardView]:::ui
         PermManager[PermissionManager]:::core
         LogCtrl["LogController (Orchestrator)"]:::core
-
         UI -- "Action" --> LogCtrl
         UI -- "Check Auth" --> PermManager
         PermManager -- "Granted" --> LogCtrl
     end
 
-    subgraph Layer3 [3. System Introspection Layer]
+    subgraph Layer3 [System Introspection Layer]
         SysMonitor[SystemMetricsMonitor]:::system
         SysMonitor -- "Thermal/Memory Alerts" --> LogCtrl
     end
 
-    subgraph Layer2 [2. Sensor Management Layer]
+    subgraph Layer2 [Sensor Management Layer]
         direction LR
         Motion["MotionLogger\n(800Hz)"]:::sensor
         Location["LocationLogger\n(1-10Hz)"]:::sensor
         Vision["VisionLogger\n(30-120Hz)"]:::sensor
-
         LogCtrl -- "Throttle Cmds" --> Motion
         LogCtrl -- "Throttle Cmds" --> Location
         LogCtrl -- "Throttle Cmds" --> Vision
     end
 
-    subgraph Layer4 [4. Storage & Persistence Layer]
+    subgraph Layer4 [Storage & Persistence Layer]
         direction TB
         Buffer["BufferQueue\n(Producer-Consumer)"]:::buffer
         Writer["DataFileWriter\n(Multi-CSV)"]:::storage
-
         Buffer == "Batch Async Write" ==> Writer
     end
 
-    %% High-bandwidth streams bypassing UI directly to Buffer
     Motion == "Dictionaries" ==> Buffer
     Location == "Vectors" ==> Buffer
     Vision == "Float arrays" ==> Buffer
     SysMonitor -. "Metrics" .-> Buffer
 ```
 
-## 🛠 How to Build & Run (Physical Device)
+---
 
-> [!IMPORTANT]
-> This app **must** be run on a physical iPhone (iPhone 16 Pro recommended) to capture real hardware/thermal characteristics. The Simulator will not provide accurate sensor data or jitters.
+## Data Schema
 
-### 1. Xcode Setup & Code Signing
+Every CSV row enforces a strict time-series meta-schema for analyzing delays, jitters, and dropouts:
 
-1. Open `iphoneLogger.xcodeproj` in Xcode.
-2. Select the **iphoneLogger** target in the project navigator.
-3. Go to the **Signing & Capabilities** tab.
-4. Select your **Development Team**.
-5. When you first build (⌘+R), a macOS security prompt for `codesign` may appear:
-   - Click **"Always Allow"** to prevent repeated password prompts during development.
+| Column | Description |
+|:--|:--|
+| `hw_timestamp` | Hardware-level creation time. Used to calculate real frequency and jitter. |
+| `sys_timestamp` | OS/App-level arrival time. Difference from `hw_timestamp` = OS scheduling delay. |
+| `target_hz` | Requested target frequency. |
+| `sys_hz` | Software-observed arrival frequency. Difference from `target_hz` = app scheduling starvation. |
+| `thermal_state` | Real-time device temperature (0: Nominal → 3: Critical). |
 
-### 2. Trusting the Developer App (On iPhone)
+### Sensor Coverage & Frequencies
 
-After the first successful build, the app will install but won't run until trusted:
-
-1. On your iPhone, go to **Settings > General > VPN & Device Management**.
-2. Tap your **Apple ID** under "Developer App".
-3. Tap **"Trust [Your Email]"** and confirm.
-
-### 3. Accessing Logged Data
-
-The app saves data in a non-blocking Multi-CSV format. You can access these files directly on your device:
-
-1. Open the **"Files"** app on your iPhone.
-2. Navigate to **Browse > On My iPhone > iphoneLogger**.
-3. You will find separate `.csv` files for each sensor (e.g., `motion_accel_...csv`, `motion_gyro_...csv`).
-4. These can be shared via **AirDrop**, Email, or iCloud Drive for analysis in Jupyter/Python.
+| Category | Sub-Category | Data Points | Target Hz | Log File Prefix |
+|:--|:--|:--|:--|:--|
+| Exteroception | Vision | Face BlendShapes (52), LiDAR Mesh, Camera Meta | 60 / 15 / 30 Hz | `extero_vision_*` |
+| | Audio | Mic Peak & Average Power (dBFS) | 10 Hz | `extero_audio_mic` |
+| | Spatial | Lat/Lon, GPS Heading, Digital Compass | 1 / 30 Hz | `extero_gps_*` |
+| | Environment | Barometric Pressure, Lux Proxy | 10 / 1 Hz | `extero_env_*` |
+| Proprioception | IMU | Accelerometer (x,y,z), Gyroscope (pitch,roll,yaw) | 800 / 200 Hz | `proprio_imu_*` |
+| | Actuator | LED Torch, Zoom, Exposure Lock | Event-based | `proprio_actuator_*` |
+| Interoception | Health | CPU, GPU, ANE, Thermal, Memory, Battery | 1 Hz | `intero_sys_health` |
 
 ---
 
-## 📁 Directory Structure
+## Installation
 
-```text
-iphoneLogger/
-├── README.md              # Project overview and instructions
-├── docs/                  # Planning and design documents (PRD, UX/UI, Arc. Diagram)
-├── App/                   # App entry point and lifecycle management
-├── Managers/              # Sensor core modules (Motion, Location, Vision, etc.)
-├── Models/                # Data schemas and model definitions
-├── Utils/                 # Utility functions (file saving, formatting, export)
-└── Views/                 # SwiftUI dashboard and UI components
+> **Requirement**: This app must run on a physical iPhone (iPhone 16 Pro recommended). The Simulator does not provide accurate sensor data.
+
+### Prerequisites
+
+- macOS with Xcode 15.0+
+- iPhone 16 Pro (or compatible device running iOS 17.0+)
+- Apple Developer account (free tier works for personal device testing)
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/neomakes/iphonelogger.git
+   cd iphonelogger
+   ```
+
+2. Open `iphoneLogger.xcodeproj` in Xcode.
+
+3. Select the **iphoneLogger** target and go to **Signing & Capabilities**:
+   - Select your **Development Team**
+   - Xcode will handle provisioning automatically
+
+4. Build and run (Cmd+R) on your connected iPhone.
+
+5. On first install, trust the developer certificate on your iPhone:
+   - **Settings > General > VPN & Device Management**
+   - Tap your Apple ID under "Developer App"
+   - Tap **Trust** and confirm
+
+---
+
+## Usage
+
+### Running a Logging Session
+
+1. Launch the app — the dashboard displays all sensor toggles
+2. **Phase 1 (Isolation)**: Toggle individual sensors to validate baseline frequencies
+3. **Phase 2 (Stress Test)**: Tap **LOGGING ALL DATA** to activate all sensors simultaneously — this deliberately induces thermal throttling and frequency jitter
+4. **Phase 3 (Active Sensing)**: Use the Actuators panel to trigger flash pulses while logging, measuring how motor interventions affect sensor noise
+
+### Accessing Logged Data
+
+1. Open **Files** app on iPhone
+2. Navigate to **On My iPhone > iphoneLogger**
+3. Find separate `.csv` files per sensor (e.g., `proprio_imu_accel_*.csv`)
+4. Share via AirDrop, iCloud Drive, or USB for analysis
+
+### Analysis
+
+Export CSV files to Python/Jupyter for visualization:
+```python
+import pandas as pd
+
+# Load high-frequency IMU data
+accel = pd.read_csv("proprio_imu_accel_session.csv")
+
+# Calculate actual frequency vs target
+accel['actual_hz'] = 1.0 / accel['hw_timestamp'].diff()
+accel['jitter'] = accel['actual_hz'] - accel['target_hz']
 ```
 
-## 📄 License & Contribution
+---
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
-Pull Requests are extremely welcome! If you find a new private API or a more efficient logging pipeline, please feel free to contribute.
+## Directory Structure
+
+```
+iphoneLogger/
+├── README.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
+├── docs/                  # PRD, UX/UI design, architecture diagrams
+├── analysis/              # Python analysis scripts
+├── iphoneLogger/
+│   ├── App/               # App entry point and lifecycle
+│   ├── Managers/          # Sensor modules (Motion, Location, Vision)
+│   ├── Models/            # Data schemas and definitions
+│   ├── Utils/             # File I/O, formatting, export utilities
+│   └── Views/             # SwiftUI dashboard and UI components
+└── iphoneLogger.xcodeproj
+```
 
 ---
 
-_Disclaimer: Heavy logging of high-frequency sensors will drain battery quickly and purposely increase device temperature for stress testing. Use with caution._
+## Related Projects
+
+- **[neocog](https://github.com/neomakes/neocog)** — On-device agentic inference kernel. iphoneLogger's sensor streams are designed as input for neocog's Physical DataStream interface.
+- **[PIP_Project](https://github.com/neomakes/PIP_Project)** — Personal Intelligence Platform. Uses processed sensor data for wellness intelligence features.
+- **[humanWorldModel](https://github.com/neomakes/humanWorldModel)** — VRAE-based human behavior trajectory modeling, consuming data patterns from sensor logs.
+
+---
+
+## Current Status
+
+**Active** — Sensor logging is complete and functional across all 8 modules.
+
+- All sensor modules operational with multi-CSV output
+- Stress testing validated: thermal throttling and frequency jitter captured as expected
+- Analysis pipeline functional with Python/Jupyter
+
+**Planned**: gRPC bridge to neocog for real-time sensor streaming to on-device agents.
+
+---
+
+## Roadmap
+
+- [ ] gRPC integration for real-time streaming to neocog
+- [ ] Real-time data visualization dashboard (on-device)
+- [ ] Additional sensor support (UWB, NFC proximity)
+- [ ] Configurable logging profiles (power-saving vs. full-capture)
+- [ ] Automated analysis pipeline with anomaly detection
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute.
+
+This project follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+---
+
+## License
+
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+*Note: Logging all sensors simultaneously will drain battery quickly and increase device temperature. This is intentional for stress testing.*
