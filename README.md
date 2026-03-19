@@ -43,12 +43,12 @@ This project serves as a **Physical DataStream testbed**: by logging exterocepti
 NeoSense is the **sensory foundation** of the NeoMakes intelligence stack:
 
 ```
-NeoSense (sensor capture) → PIP / NeoMind (wellness intelligence) → neocog (agent kernel)
+NeoSense (sensor capture) → NeoPIP / NeoMind (wellness intelligence) → neocog (agent kernel)
 ```
 
 - **NeoSense** captures raw somatic data — the physical world as experienced by the device
-- **[PIP](https://github.com/neomakes/PIP_Project)** transforms sensor patterns into personal wellness intelligence
-- **[NeoMind / humanWorldModel](https://github.com/neomakes/humanWorldModel)** models human behavior trajectories from sensor-derived features
+- **[NeoPIP](https://github.com/neomakes/neopip)** transforms sensor patterns into personal wellness intelligence
+- **[NeoMind](https://github.com/neomakes/neomind)** models human behavior trajectories from sensor-derived features
 - **[neocog](https://github.com/neomakes/neocog)** consumes these streams as input for on-device agentic inference
 
 The resulting data streams function as a hardware-level MCP-like sensor interface for on-device AI agents.
@@ -249,8 +249,8 @@ NeoSense is part of the **NeoMakes** open-source research portfolio — building
 | Project | Role | Link |
 |:--|:--|:--|
 | **NeoSense** | Somatic sensor capture | *you are here* |
-| **PIP** | Personal Intelligence Platform | [neomakes/PIP_Project](https://github.com/neomakes/PIP_Project) |
-| **humanWorldModel** | VRAE behavior trajectory modeling | [neomakes/humanWorldModel](https://github.com/neomakes/humanWorldModel) |
+| **NeoPIP** | Personal Intelligence Platform | [neomakes/neopip](https://github.com/neomakes/neopip) |
+| **NeoMind** | VRAE behavior trajectory modeling | [neomakes/neomind](https://github.com/neomakes/neomind) |
 | **neocog** | On-device agentic inference kernel | [neomakes/neocog](https://github.com/neomakes/neocog) |
 | **NeoLAT** | Agent persona evaluation testbed | [neomakes/neolat](https://github.com/neomakes/neolat) |
 | **EigenLLM** | LLM decomposition research | [neomakes/eigenllm](https://github.com/neomakes/eigenllm) |

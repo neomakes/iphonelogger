@@ -47,12 +47,12 @@
 NeoSense는 NeoMakes 지능 스택의 **감각 기반**입니다:
 
 ```
-NeoSense (센서 수집) → PIP / NeoMind (웰니스 지능) → neocog (에이전트 커널)
+NeoSense (센서 수집) → NeoPIP / NeoMind (웰니스 지능) → neocog (에이전트 커널)
 ```
 
 - **NeoSense**: 원시 체성감각 데이터 수집 — 디바이스가 경험하는 물리 세계
-- **[PIP](https://github.com/neomakes/PIP_Project)**: 센서 패턴을 개인 웰니스 지능으로 변환
-- **[NeoMind / humanWorldModel](https://github.com/neomakes/humanWorldModel)**: 센서 파생 특성으로부터 인간 행동 궤적 모델링
+- **[NeoPIP](https://github.com/neomakes/neopip)**: 센서 패턴을 개인 웰니스 지능으로 변환
+- **[NeoMind](https://github.com/neomakes/neomind)**: 센서 파생 특성으로부터 인간 행동 궤적 모델링
 - **[neocog](https://github.com/neomakes/neocog)**: 온디바이스 에이전트 추론의 입력으로 데이터 스트림 소비
 
 결과 데이터 스트림은 온디바이스 AI 에이전트를 위한 하드웨어 수준 MCP 유사 센서 인터페이스로 기능합니다.
@@ -253,8 +253,8 @@ NeoSense는 **NeoMakes** 오픈소스 연구 포트폴리오의 일부입니다 
 | 프로젝트 | 역할 | 링크 |
 |:--|:--|:--|
 | **NeoSense** | 체성감각 센서 수집 | *현재 위치* |
-| **PIP** | 개인 지능 플랫폼 | [neomakes/PIP_Project](https://github.com/neomakes/PIP_Project) |
-| **humanWorldModel** | VRAE 행동 궤적 모델링 | [neomakes/humanWorldModel](https://github.com/neomakes/humanWorldModel) |
+| **NeoPIP** | 개인 지능 플랫폼 | [neomakes/neopip](https://github.com/neomakes/neopip) |
+| **NeoMind** | VRAE 행동 궤적 모델링 | [neomakes/neomind](https://github.com/neomakes/neomind) |
 | **neocog** | 온디바이스 에이전트 추론 커널 | [neomakes/neocog](https://github.com/neomakes/neocog) |
 | **NeoLAT** | 에이전트 페르소나 평가 테스트베드 | [neomakes/neolat](https://github.com/neomakes/neolat) |
 | **EigenLLM** | LLM 분해 연구 | [neomakes/eigenllm](https://github.com/neomakes/eigenllm) |
